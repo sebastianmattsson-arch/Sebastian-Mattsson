@@ -43,6 +43,11 @@ extension AppState {
 enum LiveService {
     static let recordType = "LiveScore"
 
+    /// Webbsidan där familjen följer via länk (GitHub Pages, mappen web/ i repot).
+    static let webBase = "https://sebastianmattsson-arch.github.io/Sebastian-Mattsson/"
+
+    static func webLink(code: String) -> URL? { URL(string: webBase + "?kod=" + code) }
+
     private static var db: CKDatabase { CKContainer.default().publicCloudDatabase }
 
     static func makeCode() -> String {

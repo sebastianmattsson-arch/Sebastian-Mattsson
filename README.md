@@ -11,7 +11,7 @@ En riktig iPhone-app (SwiftUI) byggd från webbappen *Poänglogg*. Logga varje p
 - **Statistik** för matchen, ett set eller hela turneringen: matchförlopp (tryck på en punkt), förlorade/vunna poäng per orsak, serve och mottagning
 - **Dela / kopiera sammanfattning** (till Meddelanden, mejl, Anteckningar …)
 - **Inställningar**: spelarens namn, egna orsaker (svep för att ta bort), radera all data
-- **Livescore för familjen** (sändningsikonen överst): slå på delning, så skickas ställningen till iCloud efter varje poäng. Familjen skriver in koden i sin Poänglogg-app och ser poäng, set, serve, de senaste poängen, matchförlopp och dagens matcher, och vyn uppdateras var 10:e sekund
+- **Livescore för familjen** (sändningsikonen överst): slå på delning, så skickas ställningen till iCloud efter varje poäng. Familjen öppnar en **länk i webbläsaren** (ingen app behövs) eller skriver in koden i Poänglogg-appen, och ser poäng, set, serve, de senaste poängen, matchförlopp och dagens matcher, och vyn uppdateras var 10:e sekund
 - Mörkt läge, iPhone och iPad. Matcherna sparas lokalt på telefonen. Bara livescoren skickas till iCloud, och bara när delningen är på.
 
 Ej med (än) jämfört med webbversionen: *Claude-analysen av matchen*.
@@ -59,6 +59,12 @@ Workflowen `.github/workflows/testflight.yml` bygger, signerar och laddar upp ap
 
    Publika databasen gör att alla med appen kan läsa en livescore med rätt kod, men bara den som skapade den kan ändra den.
 
+8. **Webbsidan för familjen** (GitHub Pages):
+   - CloudKit Console → containern → *API Access/Tokens & Keys* → **New API Token**. Namn `Webb`, *Allowed Origins*: `https://sebastianmattsson-arch.github.io`. Kopiera tokenen.
+   - GitHub → *Settings* → *Secrets and variables* → *Actions* → fliken **Variables** → `CLOUDKIT_API_TOKEN` = tokenen. Tokenen syns i webbsidans källkod. Det är normalt för CloudKit på webben, eftersom den bara ger läsrätt till livescoren.
+   - GitHub → *Settings* → *Pages* → *Source*: **GitHub Actions**.
+   - *Actions* → **Livescore-webbsida** → *Run workflow*. Sidan finns sedan på <https://sebastianmattsson-arch.github.io/Sebastian-Mattsson/> och länken med kod skickas från appen.
+
 ### Skicka ett nytt bygge
 
 GitHub → *Actions* → **TestFlight** → **Run workflow**. Efter ca 10 minuter för bygget och 5–15 minuter bearbetning hos Apple syns bygget i App Store Connect under *TestFlight*.
@@ -90,7 +96,9 @@ PoangLogg/
     Sheets.swift         Ny match, Alla matcher, Inställningar
     Live.swift           livescore-data och CloudKit
     LiveViews.swift      livescore-vyn, följ med kod, livescore-inställningar
+web/
+  index.html             livescore-webbsidan (publiceras med GitHub Pages)
     Assets.xcassets      appikon, klubblogga (spelarbild läggs till lokalt)
 ```
 
-GitHub Actions: `ios-build.yml` bygger appen vid varje push för att kontrollera att koden kompilerar. `testflight.yml` laddar upp till TestFlight när du kör den manuellt.
+GitHub Actions: `ios-build.yml` bygger appen vid varje push för att kontrollera att koden kompilerar. `testflight.yml` laddar upp till TestFlight när du kör den manuellt. `pages.yml` publicerar livescore-webbsidan.

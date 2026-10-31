@@ -1,0 +1,45 @@
+name: Livescore-webbsida
+
+on:
+  push:
+    paths:
+      - "web/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skriv in CloudKit-token
+        env:
+          TOKEN: ${{ vars.CLOUDKIT_API_TOKEN }}
+          CONTAINER: ${{ vars.CLOUDKIT_CONTAINER || 'iCloud.com.sebastianmattsson.poanglogg' }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::Variabeln CLOUDKIT_API_TOKEN saknas – sidan publiceras men kan inte hämta livescore än."
+          fi
+          python3 - <<'PY'
+          import json, os
+          cfg = {"container": os.environ["CONTAINER"], "environment": "production", "token": os.environ.get("TOKEN", "")}
+          open("web/config.js", "w").write("window.POANGLOGG = " + json.dumps(cfg) + ";\n")
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4

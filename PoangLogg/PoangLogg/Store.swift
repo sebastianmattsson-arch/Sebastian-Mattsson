@@ -184,7 +184,9 @@ final class Store {
     }
 
     var liveInvite: String {
-        "Följ \(state.player)s badmintonmatcher live i appen Poänglogg. Tryck på sändningsikonen överst och skriv in koden: \(state.liveCode ?? "")"
+        let code = state.liveCode ?? ""
+        let link = LiveService.webLink(code: code)?.absoluteString ?? ""
+        return "Följ \(state.player)s badmintonmatcher live: \(link)\n\n(Har du appen Poänglogg kan du i stället trycka på sändningsikonen och skriva in koden \(code).)"
     }
 
     private func scheduleLivePublish() {

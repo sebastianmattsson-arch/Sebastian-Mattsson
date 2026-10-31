@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Livescore som familjen ser den.
 struct LiveScoreView: View {
@@ -362,7 +363,15 @@ struct LiveSheet: View {
                                 .textSelection(.enabled)
                         }
                         ShareLink(item: store.liveInvite) {
-                            Label("Skicka koden till familjen", systemImage: "square.and.arrow.up")
+                            Label("Skicka länken till familjen", systemImage: "square.and.arrow.up")
+                        }
+                        if let link = LiveService.webLink(code: code) {
+                            Button {
+                                UIPasteboard.general.url = link
+                                store.show("Länken kopierad")
+                            } label: {
+                                Label("Kopiera länk", systemImage: "link")
+                            }
                         }
                         Button {
                             dismiss()
@@ -377,7 +386,7 @@ struct LiveSheet: View {
                 } header: {
                     Text("Livescore för familjen")
                 } footer: {
-                    Text("Ställningen skickas till iCloud efter varje poäng. Familjen installerar Poänglogg, trycker på sändningsikonen och skriver in koden. Du behöver vara inloggad på iCloud.")
+                    Text("Ställningen skickas till iCloud efter varje poäng. Familjen öppnar länken i webbläsaren, ingen app behövs. Med Poänglogg-appen går det också att följa med koden. Du behöver vara inloggad på iCloud.")
                 }
 
                 Section {
