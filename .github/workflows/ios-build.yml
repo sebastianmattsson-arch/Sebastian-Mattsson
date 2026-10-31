@@ -1,0 +1,22 @@
+name: iOS-bygge
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Visa Xcode-version
+        run: xcodebuild -version
+      - name: Bygg för simulator
+        run: |
+          xcodebuild \
+            -project PoangLogg/PoangLogg.xcodeproj \
+            -target PoangLogg \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build

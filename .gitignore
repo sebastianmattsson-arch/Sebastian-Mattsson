@@ -1,0 +1,7 @@
+.DS_Store
+xcuserdata/
+DerivedData/
+build/
+*.xcuserstate
+# Spelarbilden läggs till lokalt i Xcode och ska inte ligga i det publika repot
+PoangLogg/PoangLogg/Assets.xcassets/Player.imageset/
