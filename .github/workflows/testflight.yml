@@ -1,0 +1,99 @@
+name: TestFlight
+
+# Kör manuellt: GitHub → Actions → TestFlight → Run workflow
+on:
+  workflow_dispatch:
+
+jobs:
+  testflight:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      BUNDLE_ID: ${{ vars.BUNDLE_ID || 'com.sebastianmattsson.poanglogg' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kontrollera hemligheter
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          missing=""
+          [ -z "$TEAM_ID" ] && missing="$missing APPLE_TEAM_ID"
+          [ -z "$KEY_ID" ] && missing="$missing ASC_KEY_ID"
+          [ -z "$ISSUER_ID" ] && missing="$missing ASC_ISSUER_ID"
+          [ -z "$ASC_KEY_P8" ] && missing="$missing ASC_KEY_P8"
+          if [ -n "$missing" ]; then
+            echo "::error::Saknade secrets:$missing. Se README, avsnittet TestFlight."
+            exit 1
+          fi
+
+      - name: Lägg API-nyckeln på plats
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
+          echo "KEY_PATH=$RUNNER_TEMP/keys/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Lägg in spelarbild (valfritt, från secret)
+        env:
+          PLAYER_PHOTO_BASE64: ${{ secrets.PLAYER_PHOTO_BASE64 }}
+        run: |
+          if [ -n "$PLAYER_PHOTO_BASE64" ]; then
+            d=PoangLogg/PoangLogg/Assets.xcassets/Player.imageset
+            mkdir -p "$d"
+            printf '%s' "$PLAYER_PHOTO_BASE64" | base64 --decode > "$d/player.jpg"
+            printf '%s' '{"images":[{"filename":"player.jpg","idiom":"universal"}],"info":{"author":"xcode","version":1}}' > "$d/Contents.json"
+            echo "Spelarbild tillagd"
+          else
+            echo "Ingen spelarbild – appen visar initialen"
+          fi
+
+      - name: Arkivera (signeras automatiskt via App Store Connect)
+        run: |
+          xcodebuild archive \
+            -project PoangLogg/PoangLogg.xcodeproj \
+            -scheme PoangLogg \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/PoangLogg.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+
+      - name: Ladda upp till TestFlight
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/PoangLogg.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID"
+          echo "Klart! Bygge ${{ github.run_number }} är uppladdat. Det dyker upp i TestFlight efter ca 5–15 minuters bearbetning hos Apple."
+
+      - name: Städa bort nyckeln
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"

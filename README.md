@@ -27,6 +27,40 @@ Du behöver en Mac med **Xcode 16 eller senare** (gratis i App Store).
 
 Med ett gratis Apple-ID fungerar appen i 7 dagar innan den måste installeras om från Xcode. Med **Apple Developer Program** (99 USD/år) håller den i ett år, och du kan dela den med familjen via **TestFlight** eller lägga upp den i App Store (*Product → Archive* i Xcode).
 
+## TestFlight utan Mac
+
+Workflowen `.github/workflows/testflight.yml` bygger, signerar och laddar upp appen till TestFlight på GitHubs Mac-maskiner. Allt nedan görs i en webbläsare (dator eller telefon).
+
+### Engångsinställning
+
+1. **Gå med i Apple Developer Program** på <https://developer.apple.com/programs/> (99 USD/år). Godkännandet kan ta upp till ett par dygn.
+2. **Hitta ditt Team ID**: <https://developer.apple.com/account> → *Membership details* → *Team ID* (10 tecken).
+3. **Registrera Bundle ID**: <https://developer.apple.com/account/resources/identifiers> → **+** → *App IDs* → *App* → Bundle ID (explicit): `com.sebastianmattsson.poanglogg`.
+4. **Skapa appen i App Store Connect**: <https://appstoreconnect.apple.com> → *Appar* → **+** → *Ny app*. Plattform iOS, namn t.ex. *Poänglogg Askim* (namnet måste vara unikt i App Store), språk svenska, välj Bundle ID från steg 3, SKU t.ex. `poanglogg`.
+5. **Skapa en API-nyckel**: App Store Connect → *Användare och åtkomst* → *Integrationer* → *App Store Connect API* → *Teamnycklar* → **+**. Namn `GitHub`, åtkomst **Admin** (krävs för att signeringen ska kunna skapa certifikat automatiskt). Notera **Issuer ID** och **Key ID** och ladda ner `.p8`-filen (går bara en gång).
+6. **Lägg in secrets på GitHub**: repot → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*:
+
+   | Namn | Värde |
+   |---|---|
+   | `APPLE_TEAM_ID` | Team ID från steg 2 |
+   | `ASC_ISSUER_ID` | Issuer ID från steg 5 |
+   | `ASC_KEY_ID` | Key ID från steg 5 |
+   | `ASC_KEY_P8` | Hela innehållet i `.p8`-filen, inklusive raderna `-----BEGIN PRIVATE KEY-----` och `-----END PRIVATE KEY-----` |
+   | `PLAYER_PHOTO_BASE64` | *(valfritt)* spelarbilden som base64-text. Den hålls hemlig och läggs bara in vid bygget |
+
+   Vill du använda ett annat Bundle ID: lägg till det som **variable** (fliken *Variables*) med namnet `BUNDLE_ID`.
+
+### Skicka ett nytt bygge
+
+GitHub → *Actions* → **TestFlight** → **Run workflow**. Efter ca 10 minuter för bygget och 5–15 minuter bearbetning hos Apple syns bygget i App Store Connect under *TestFlight*.
+
+### Installera på iPhonen
+
+1. App Store Connect → appen → *TestFlight* → *Interna testare* → **+** → skapa en grupp och lägg till dig själv (och familjen, de måste läggas till som användare under *Användare och åtkomst*). Bjud in externa testare via *Externa testare*. Då granskar Apple första bygget, vilket brukar ta ungefär ett dygn.
+2. Installera **TestFlight** från App Store på iPhonen, öppna inbjudan i mejlet och tryck **Installera**.
+
+Ett TestFlight-bygge fungerar i 90 dagar. Kör workflowen igen för att få ett nytt.
+
 ## Struktur
 
 ```
@@ -46,4 +80,4 @@ PoangLogg/
     Assets.xcassets      appikon, klubblogga (spelarbild läggs till lokalt)
 ```
 
-GitHub Actions (`.github/workflows/ios-build.yml`) bygger appen på en Mac vid varje push, så att man ser att koden kompilerar.
+GitHub Actions: `ios-build.yml` bygger appen vid varje push för att kontrollera att koden kompilerar. `testflight.yml` laddar upp till TestFlight när du kör den manuellt.
