@@ -9,11 +9,26 @@ struct ContentView: View {
     @State private var showNewMatch = false
     @State private var showMatches = false
     @State private var showSettings = false
+    @State private var showLive = false
+    @State private var pendingLive: LiveCover?
+    @State private var liveCover: LiveCover?
+
+    enum LiveCover: Identifiable, Equatable {
+        case preview
+        case follow(String)
+        var id: String {
+            switch self {
+            case .preview: return "preview"
+            case .follow(let code): return "follow-" + code
+            }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             ScoreboardView(onNewMatch: { showNewMatch = true },
-                           onShowMatches: { showMatches = true })
+                           onShowMatches: { showMatches = true },
+                           onLive: { showLive = true })
 
             Picker("Vy", selection: $tab) {
                 Text("Logga").tag(Tab.log)
@@ -45,6 +60,29 @@ struct ContentView: View {
         .sheet(isPresented: $showNewMatch) { NewMatchSheet() }
         .sheet(isPresented: $showMatches) { MatchesSheet() }
         .sheet(isPresented: $showSettings) { SettingsSheet() }
+        .sheet(isPresented: $showLive, onDismiss: {
+            if let p = pendingLive {
+                pendingLive = nil
+                liveCover = p
+            }
+        }) {
+            LiveSheet(onPreview: { pendingLive = .preview },
+                      onFollow: { pendingLive = .follow($0) })
+        }
+        .fullScreenCover(item: $liveCover) { cover in
+            switch cover {
+            case .preview:
+                LiveScoreView(doc: store.state.liveDoc(), onClose: { liveCover = nil })
+            case .follow(let code):
+                FollowView(code: code, onClose: { liveCover = nil })
+            }
+        }
+        .onAppear {
+            // Familjemedlemmar som bara följer: öppna livescoren direkt.
+            if store.state.matches.isEmpty, let code = store.state.followCode {
+                liveCover = .follow(code)
+            }
+        }
     }
 }
 

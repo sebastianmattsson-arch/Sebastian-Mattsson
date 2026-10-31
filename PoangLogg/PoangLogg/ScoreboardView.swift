@@ -5,6 +5,7 @@ struct ScoreboardView: View {
     @Environment(Store.self) private var store
     let onNewMatch: () -> Void
     let onShowMatches: () -> Void
+    let onLive: () -> Void
 
     var body: some View {
         let m = store.current
@@ -49,6 +50,18 @@ struct ScoreboardView: View {
 
                     Button("Ny match", action: onNewMatch)
                         .buttonStyle(OutlineOnDarkStyle())
+
+                    Button(action: onLive) {
+                        Image(systemName: "dot.radiowaves.left.and.right")
+                            .frame(width: 24, height: 24)
+                            .overlay(alignment: .topTrailing) {
+                                if store.state.liveEnabled {
+                                    Circle().fill(Theme.red).frame(width: 8, height: 8).offset(x: 4, y: -2)
+                                }
+                            }
+                    }
+                    .buttonStyle(OutlineOnDarkStyle())
+                    .accessibilityLabel(store.state.liveEnabled ? "Livescore, delas" : "Livescore")
                 }
                 .font(.subheadline)
 

@@ -11,9 +11,10 @@ En riktig iPhone-app (SwiftUI) byggd från webbappen *Poänglogg*. Logga varje p
 - **Statistik** för matchen, ett set eller hela turneringen: matchförlopp (tryck på en punkt), förlorade/vunna poäng per orsak, serve och mottagning
 - **Dela / kopiera sammanfattning** (till Meddelanden, mejl, Anteckningar …)
 - **Inställningar**: spelarens namn, egna orsaker (svep för att ta bort), radera all data
-- Mörkt läge, iPhone och iPad. All data sparas lokalt på telefonen.
+- **Livescore för familjen** (sändningsikonen överst): slå på delning, så skickas ställningen till iCloud efter varje poäng. Familjen skriver in koden i sin Poänglogg-app och ser poäng, set, serve, de senaste poängen, matchförlopp och dagens matcher, och vyn uppdateras var 10:e sekund
+- Mörkt läge, iPhone och iPad. Matcherna sparas lokalt på telefonen. Bara livescoren skickas till iCloud, och bara när delningen är på.
 
-Ej med (än) jämfört med webbversionen: *Claude-analysen av matchen* och *livescore för familjen*. Båda kräver en server eller ett konto och kan läggas till senare.
+Ej med (än) jämfört med webbversionen: *Claude-analysen av matchen*.
 
 ## Kör appen på din iPhone
 
@@ -35,7 +36,9 @@ Workflowen `.github/workflows/testflight.yml` bygger, signerar och laddar upp ap
 
 1. **Gå med i Apple Developer Program** på <https://developer.apple.com/programs/> (99 USD/år). Godkännandet kan ta upp till ett par dygn.
 2. **Hitta ditt Team ID**: <https://developer.apple.com/account> → *Membership details* → *Team ID* (10 tecken).
-3. **Registrera Bundle ID**: <https://developer.apple.com/account/resources/identifiers> → **+** → *App IDs* → *App* → Bundle ID (explicit): `com.sebastianmattsson.poanglogg`.
+3. **Registrera iCloud-container och Bundle ID** på <https://developer.apple.com/account/resources/identifiers>:
+   - **+** → *iCloud Containers* → identifier `iCloud.com.sebastianmattsson.poanglogg`.
+   - **+** → *App IDs* → *App* → Bundle ID (explicit) `com.sebastianmattsson.poanglogg`. Bocka i **iCloud** under *Capabilities*, välj *Include CloudKit support*, tryck *Edit/Configure* och välj containern ovan.
 4. **Skapa appen i App Store Connect**: <https://appstoreconnect.apple.com> → *Appar* → **+** → *Ny app*. Plattform iOS, namn t.ex. *Poänglogg Askim* (namnet måste vara unikt i App Store), språk svenska, välj Bundle ID från steg 3, SKU t.ex. `poanglogg`.
 5. **Skapa en API-nyckel**: App Store Connect → *Användare och åtkomst* → *Integrationer* → *App Store Connect API* → *Teamnycklar* → **+**. Namn `GitHub`, åtkomst **Admin** (krävs för att signeringen ska kunna skapa certifikat automatiskt). Notera **Issuer ID** och **Key ID** och ladda ner `.p8`-filen (går bara en gång).
 6. **Lägg in secrets på GitHub**: repot → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*:
@@ -49,6 +52,12 @@ Workflowen `.github/workflows/testflight.yml` bygger, signerar och laddar upp ap
    | `PLAYER_PHOTO_BASE64` | *(valfritt)* spelarbilden som base64-text. Den hålls hemlig och läggs bara in vid bygget |
 
    Vill du använda ett annat Bundle ID: lägg till det som **variable** (fliken *Variables*) med namnet `BUNDLE_ID`.
+
+7. **Förbered livescoren i CloudKit** (behövs för att livescoren ska fungera i TestFlight-byggen): <https://icloud.developer.apple.com> → *CloudKit Database* → välj containern → miljö **Development**:
+   - *Schema → Record Types* → **+** → namn `LiveScore`. Lägg till fälten `payload` (typ *String*) och `updated` (typ *Date/Time*). Spara.
+   - Välj *Deploy Schema Changes…* och sedan *Deploy* till **Production**.
+
+   Publika databasen gör att alla med appen kan läsa en livescore med rätt kod, men bara den som skapade den kan ändra den.
 
 ### Skicka ett nytt bygge
 
@@ -66,6 +75,8 @@ Ett TestFlight-bygge fungerar i 90 dagar. Kör workflowen igen för att få ett 
 ```
 PoangLogg/
   PoangLogg.xcodeproj
+  Info.plist             tillägg till Info.plist (exportkryptering)
+  PoangLogg.entitlements iCloud/CloudKit för livescoren
   PoangLogg/
     PoangLoggApp.swift   appens start
     Models.swift         matcher, poäng, orsaker, serve- och setlogik
@@ -77,6 +88,8 @@ PoangLogg/
     StatsView.swift      statistikfliken
     FlowChart.swift      matchförloppsgrafen
     Sheets.swift         Ny match, Alla matcher, Inställningar
+    Live.swift           livescore-data och CloudKit
+    LiveViews.swift      livescore-vyn, följ med kod, livescore-inställningar
     Assets.xcassets      appikon, klubblogga (spelarbild läggs till lokalt)
 ```
 

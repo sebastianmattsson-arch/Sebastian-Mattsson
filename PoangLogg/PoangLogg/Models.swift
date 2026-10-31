@@ -154,6 +154,25 @@ struct AppState: Codable {
     var matches: [Match] = []
     var currentId: String?
     var lastTo = 15
+    /// Livescore: om ställningen delas, och med vilken kod.
+    var liveEnabled = false
+    var liveCode: String?
+    /// Senaste koden som den här telefonen följt.
+    var followCode: String?
+
+    init(player: String = "Douglas") { self.player = player }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        player = try c.decodeIfPresent(String.self, forKey: .player) ?? "Douglas"
+        reasons = try c.decodeIfPresent([Reason].self, forKey: .reasons) ?? Reason.defaults
+        matches = try c.decodeIfPresent([Match].self, forKey: .matches) ?? []
+        currentId = try c.decodeIfPresent(String.self, forKey: .currentId)
+        lastTo = try c.decodeIfPresent(Int.self, forKey: .lastTo) ?? 15
+        liveEnabled = try c.decodeIfPresent(Bool.self, forKey: .liveEnabled) ?? false
+        liveCode = try c.decodeIfPresent(String.self, forKey: .liveCode)
+        followCode = try c.decodeIfPresent(String.self, forKey: .followCode)
+    }
 
     /// Lägger till standardorsaker som saknas (om nya har tillkommit i en uppdatering).
     mutating func migrate() {

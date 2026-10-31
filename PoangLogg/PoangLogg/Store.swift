@@ -6,8 +6,15 @@ import SwiftUI
 @Observable
 final class Store {
     var state: AppState {
-        didSet { persist() }
+        didSet {
+            persist()
+            if state.liveEnabled { scheduleLivePublish() }
+        }
     }
+
+    /// Senaste status för livescoren, visas i livescore-vyn.
+    var liveStatus: String?
+    private var liveTask: Task<Void, Never>?
 
     struct Toast: Equatable {
         let id = UUID()
@@ -155,8 +162,47 @@ final class Store {
     }
 
     func resetAll() {
-        state = AppState(player: state.player)
+        let live = (state.liveEnabled, state.liveCode, state.followCode)
+        var fresh = AppState(player: state.player)
+        (fresh.liveEnabled, fresh.liveCode, fresh.followCode) = live
+        state = fresh
         show("Allt raderat")
+    }
+
+    // MARK: - Livescore
+
+    func setLiveEnabled(_ on: Bool) {
+        if on && state.liveCode == nil { state.liveCode = LiveService.makeCode() }
+        state.liveEnabled = on
+        liveStatus = on ? "Ansluter …" : nil
+        if !on { liveTask?.cancel() }
+    }
+
+    func newLiveCode() {
+        state.liveCode = LiveService.makeCode()
+        show("Ny kod: \(state.liveCode ?? "")")
+    }
+
+    var liveInvite: String {
+        "Följ \(state.player)s badmintonmatcher live i appen Poänglogg. Tryck på sändningsikonen överst och skriv in koden: \(state.liveCode ?? "")"
+    }
+
+    private func scheduleLivePublish() {
+        guard let code = state.liveCode else { return }
+        liveTask?.cancel()
+        liveTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.5))
+            guard let self, !Task.isCancelled else { return }
+            let doc = self.state.liveDoc()
+            do {
+                try await LiveService.publish(doc, code: code)
+                guard !Task.isCancelled else { return }
+                self.liveStatus = "Uppdaterad " + Date.now.formatted(date: .omitted, time: .shortened)
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.liveStatus = LiveService.describe(error)
+            }
+        }
     }
 
     // MARK: - Hjälpare
