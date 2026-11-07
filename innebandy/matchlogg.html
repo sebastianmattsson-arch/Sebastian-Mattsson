@@ -1,0 +1,384 @@
+<title>Waves Matchlogg</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky scoreboard on top, three tabs below (Registrera / Spelare / Logg), bottom sheet for picking a player. */
+:root{
+  --bg:#eef3f6; --surface:#ffffff; --surface-2:#e3ebf0; --fg:#0e2433; --muted:#5a7183; --line:#cfdbe3;
+  --wave:#0d6e8a; --wave-ink:#ffffff; --board:#0e2b3d; --board-fg:#eaf6fb; --board-muted:#8fb6c9;
+  --good:#1d7f4e; --good-bg:#dff2e7; --bad:#b4372f; --bad-bg:#f8e1df; --warn:#9a6a00; --warn-bg:#f8edd0;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif; --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#08151e; --surface:#10222e; --surface-2:#173040; --fg:#e4f0f6; --muted:#8aa5b6; --line:#23404f;
+  --wave:#39a9c7; --wave-ink:#04141c; --board:#04101a; --board-fg:#eaf6fb; --board-muted:#6f97ab;
+  --good:#5fd09a; --good-bg:#12352a; --bad:#f08a82; --bad-bg:#3a1a19; --warn:#e7b94f; --warn-bg:#3a2e12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#08151e; --surface:#10222e; --surface-2:#173040; --fg:#e4f0f6; --muted:#8aa5b6; --line:#23404f;
+  --wave:#39a9c7; --wave-ink:#04141c; --board:#04101a; --board-fg:#eaf6fb; --board-muted:#6f97ab;
+  --good:#5fd09a; --good-bg:#12352a; --bad:#f08a82; --bad-bg:#3a1a19; --warn:#e7b94f; --warn-bg:#3a2e12; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--board)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible{outline:3px solid var(--wave);outline-offset:2px}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* Scoreboard */
+.board{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--board);color:var(--board-fg)}
+.board .wrap{padding-block:12px 10px;display:grid;gap:8px}
+.teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.team{font-family:var(--display);font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--board-muted);line-height:1.1}
+.team.us{color:var(--board-fg)} .team.them{text-align:right}
+.score{font-family:var(--display);font-weight:800;font-size:52px;line-height:1;font-variant-numeric:tabular-nums;display:flex;gap:10px;align-items:center}
+.score span.dash{color:var(--board-muted);font-size:36px}
+.clockrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.per{display:flex;background:#ffffff14;border-radius:8px;padding:3px}
+.per button{font-family:var(--display);font-weight:700;padding:6px 10px;border-radius:6px;color:var(--board-muted);letter-spacing:.04em}
+.per button[aria-pressed="true"]{background:var(--board-fg);color:var(--board)}
+.clock{font-family:var(--display);font-weight:700;font-size:30px;font-variant-numeric:tabular-nums;min-width:4.2ch;text-align:center}
+.clock.paused{color:var(--board-muted)}
+.cbtn{font-family:var(--display);font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 14px;border-radius:8px;background:#ffffff1c;color:var(--board-fg)}
+.cbtn.go{background:#2fae74;color:#04141c}
+.cbtn.stop{background:#e2a43a;color:#1d1300}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;padding-block:10px 4px}
+.tabs button{flex:1;padding:10px 6px;border-radius:10px;font-weight:600;color:var(--muted);background:transparent;border:1px solid transparent}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);border-color:var(--line)}
+main .wrap{padding-block:6px 120px}
+section[hidden]{display:none}
+h2{font-family:var(--display);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:18px 0 8px}
+
+/* Event buttons */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.ev{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:14px 14px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);min-height:76px;transition:transform .08s}
+.ev:active{transform:scale(.97)}
+.ev b{font-weight:600;font-size:16px;line-height:1.2}
+.ev small{color:var(--muted);font-size:12.5px}
+.ev .n{position:absolute;top:10px;right:12px;font-family:var(--display);font-weight:800;font-size:24px;font-variant-numeric:tabular-nums;line-height:1}
+.ev.good{border-left:5px solid var(--good)} .ev.good .n{color:var(--good)}
+.ev.bad{border-left:5px solid var(--bad)} .ev.bad .n{color:var(--bad)}
+.ev.big{background:var(--wave);color:var(--wave-ink);border-color:var(--wave)} .ev.big small,.ev.big .n{color:var(--wave-ink);opacity:.9}
+.ev.bigbad{background:var(--bad-bg);border-color:var(--bad)} .ev.bigbad .n{color:var(--bad)}
+
+.recent{display:grid;gap:6px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.row .t{font-family:var(--display);font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;min-width:62px}
+.row .what{flex:1;min-width:0}
+.row .what em{font-style:normal;color:var(--muted)}
+.row .x{color:var(--muted);padding:4px 8px;border-radius:6px;font-size:13px}
+.row .x:hover{background:var(--surface-2)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--muted)}
+.dot.good{background:var(--good)} .dot.bad{background:var(--bad)}
+.empty{color:var(--muted);padding:12px 0}
+
+/* Stats */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px}
+.kpi .v{font-family:var(--display);font-weight:800;font-size:26px;font-variant-numeric:tabular-nums;line-height:1}
+.kpi .l{font-size:12px;color:var(--muted);margin-top:4px}
+@media (max-width:460px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;min-width:520px}
+th,td{padding:9px 8px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+td.nm,th.nm{text-align:left}
+td.num{font-family:var(--display);font-weight:700;color:var(--wave)}
+tr:last-child td{border-bottom:0}
+td.z{color:var(--line)}
+td.pm-pos{color:var(--good);font-weight:600} td.pm-neg{color:var(--bad);font-weight:600}
+.legend{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{padding:11px 16px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-weight:600}
+.btn.primary{background:var(--wave);color:var(--wave-ink);border-color:var(--wave)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+textarea{width:100%;min-height:120px;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+
+/* Sheet */
+.scrim{position:fixed;inset:0;background:#0009;z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:720px;max-height:88%;overflow:auto;border-radius:18px 18px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet h3{font-family:var(--display);font-weight:700;font-size:24px;margin:0 0 2px}
+.sheet p.sub{color:var(--muted);margin:0 0 12px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.pl{display:flex;flex-direction:column;align-items:center;padding:10px 4px;border-radius:12px;background:var(--surface);border:1px solid var(--line);min-height:70px;justify-content:center}
+.pl .no{font-family:var(--display);font-weight:800;font-size:26px;line-height:1;color:var(--wave)}
+.pl .fn{font-size:14px;font-weight:500}
+.pl.mv{border-color:var(--warn);background:var(--warn-bg)}
+.pl.mv .tag{font-size:10.5px;letter-spacing:.08em;color:var(--warn);font-weight:600}
+.pl:active{transform:scale(.96)}
+.sheetfoot{display:flex;gap:8px;margin-top:12px}
+.sheetfoot .btn{flex:1}
+.noteinput{width:100%;font:inherit;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);margin-bottom:10px}
+
+/* Toast */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--board);color:var(--board-fg);padding:10px 10px 10px 16px;border-radius:12px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px #0005;max-width:calc(100% - 32px)}
+.toast button{color:#7fd3ec;font-weight:600;padding:6px 10px}
+@media (prefers-reduced-motion:reduce){.ev,.pl{transition:none}}
+</style>
+
+<header class="board">
+  <div class="wrap">
+    <div class="teams">
+      <div class="team us">Lindås Waves<br><span style="font-size:12px;color:var(--board-muted)">F14/15</span></div>
+      <div class="score" aria-live="polite"><span id="sUs">0</span><span class="dash">–</span><span id="sThem">0</span></div>
+      <div class="team them" id="oppName">Dingle</div>
+    </div>
+    <div class="clockrow">
+      <div class="per" role="group" aria-label="Period" id="perGroup"></div>
+      <span class="clock paused" id="clock">00:00</span>
+      <button class="cbtn go" id="clockBtn">Starta</button>
+      <button class="cbtn" id="clockReset" title="Nollställ klockan">0:00</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-reg" aria-selected="true" data-tab="reg">Registrera</button>
+      <button role="tab" id="tab-pl" aria-selected="false" data-tab="pl">Spelare</button>
+      <button role="tab" id="tab-log" aria-selected="false" data-tab="log">Logg</button>
+    </div>
+
+    <section id="reg">
+      <h2>Mål</h2>
+      <div class="grid" id="gGoal"></div>
+      <h2>Anfall</h2>
+      <div class="grid" id="gAtt"></div>
+      <h2>Försvar och målvakt</h2>
+      <div class="grid" id="gDef"></div>
+      <h2>Att jobba med</h2>
+      <div class="grid" id="gNeg"></div>
+      <h2>Senaste</h2>
+      <div class="recent" id="recent"></div>
+    </section>
+
+    <section id="pl" hidden>
+      <h2>Laget</h2>
+      <div class="kpis" id="kpis"></div>
+      <h2>Per spelare</h2>
+      <div class="tablewrap"><table id="ptable"></table></div>
+      <p class="legend">M mål · A assist · P poäng · SoM skott på mål (inkl. mål) · SU skott utanför · BP bra passning · BV bollvinst · BL blockering · BT bolltapp · ★ beröm · R räddningar · IM insläppta. Tryck på en rubrik för att sortera.</p>
+      <h2>Sammanfattning</h2>
+      <textarea id="summary" readonly aria-label="Sammanfattning av matchen"></textarea>
+      <div class="actions">
+        <button class="btn primary" id="copyBtn">Kopiera sammanfattning</button>
+      </div>
+    </section>
+
+    <section id="log" hidden>
+      <div id="logList"></div>
+      <h2>Match</h2>
+      <div class="actions">
+        <button class="btn" id="renameOpp">Byt motståndare</button>
+        <button class="btn danger" id="newMatch">Ny match</button>
+      </div>
+      <p class="legend">Allt sparas i den här webbläsaren på telefonen. Kopiera sammanfattningen under Spelare om du vill spara den någon annanstans.</p>
+    </section>
+  </div>
+</main>
+
+<div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="toastUndo">Ångra</button></div>
+
+<script>
+const PLAYERS=[
+ {no:3,fn:"Doris",ln:"Arvidsson",mv:true},{no:6,fn:"Ilse",ln:"Törnberg"},{no:7,fn:"Tilda",ln:"Thalenius"},
+ {no:11,fn:"Elle",ln:"Berggren"},{no:19,fn:"Julie",ln:"Sventén"},{no:20,fn:"Amanda",ln:"Wretman",mv:true},
+ {no:21,fn:"Svea",ln:"Unsgaard"},{no:22,fn:"Thea",ln:"Mattsson"},{no:24,fn:"Selma",ln:"Wahlsten Hakani"},
+ {no:26,fn:"Clara",ln:"Sandberg"},{no:28,fn:"Elsa",ln:"Nordqvist",capt:true},{no:39,fn:"Stella",ln:"Thor"},
+ {no:47,fn:"Nova",ln:"Blixter"},{no:84,fn:"Mona",ln:"Danielson"}];
+const P=Object.fromEntries(PLAYERS.map(p=>[p.no,p]));
+
+// kind: good/bad/neutral. pick: who to ask for. 
+const EV={
+ goal:{label:"Mål",hint:"Vi gör mål",kind:"good",group:"gGoal",cls:"big",pick:"all",assist:true},
+ conceded:{label:"Insläppt mål",hint:"Dingle gör mål",kind:"bad",group:"gGoal",cls:"bigbad",pick:"mv",title:"Vem stod i mål?"},
+ shot_on:{label:"Skott på mål",hint:"Räddat av motståndaren",kind:"good",group:"gAtt",pick:"all"},
+ shot_off:{label:"Skott utanför",hint:"Utanför eller blockerat",kind:"neutral",group:"gAtt",pick:"all"},
+ pass:{label:"Bra passning",hint:"Spelbar, i rätt läge",kind:"good",group:"gAtt",pick:"all"},
+ chance:{label:"Målchans",hint:"Bra läge skapat",kind:"good",group:"gAtt",pick:"all"},
+ save:{label:"Räddning",hint:"Vår målvakt räddar",kind:"good",group:"gDef",pick:"mv",title:"Vem räddade?"},
+ win:{label:"Bollvinst",hint:"Bryter, tar boll",kind:"good",group:"gDef",pick:"all"},
+ block:{label:"Blockering",hint:"Täcker skott",kind:"good",group:"gDef",pick:"all"},
+ back:{label:"Hemjobb",hint:"Springer hem, markerar",kind:"good",group:"gDef",pick:"all"},
+ loss:{label:"Bolltapp",hint:"Tappar bollen",kind:"bad",group:"gNeg",pick:"all"},
+ opp_shot:{label:"Dingle skott",hint:"Skott mot oss, ej mål",kind:"neutral",group:"gNeg",pick:"none"},
+ penalty:{label:"Utvisning",hint:"2 minuter",kind:"bad",group:"gNeg",pick:"all"},
+ praise:{label:"Beröm",hint:"Kämpar, peppar, fair play",kind:"good",group:"gNeg",pick:"all"},
+ note:{label:"Anteckning",hint:"Skriv en egen rad",kind:"neutral",group:"gNeg",pick:"note"}
+};
+const PERIODS=[1,2,3];
+const KEY="waves-matchlogg-v1";
+const fresh=()=>({opp:"Dingle",period:1,clock:{running:false,acc:0,at:0},events:[],nextId:1,sort:"no"});
+let S=load();
+
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.events)return Object.assign(fresh(),v)}catch(e){}return fresh()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const clockMs=()=>S.clock.acc+(S.clock.running?Date.now()-S.clock.at:0);
+const fmt=ms=>{const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
+const pname=no=>no==null?"Laget":`#${no} ${P[no]?P[no].fn:""}`;
+const buzz=()=>{try{navigator.vibrate&&navigator.vibrate(25)}catch(e){}};
+
+/* ---------- clock ---------- */
+function renderClock(){const c=$("clock");c.textContent=fmt(clockMs());c.classList.toggle("paused",!S.clock.running);
+ const b=$("clockBtn");b.textContent=S.clock.running?"Paus":"Starta";b.className="cbtn "+(S.clock.running?"stop":"go")}
+$("clockBtn").onclick=()=>{if(S.clock.running){S.clock.acc=clockMs();S.clock.running=false}else{S.clock.at=Date.now();S.clock.running=true;wake()}save();renderClock()};
+$("clockReset").onclick=()=>confirmSheet("Nollställa klockan?","Tiden i perioden sätts till 00:00. Händelserna ligger kvar.","Nollställ",()=>{S.clock={running:false,acc:0,at:0};save();renderClock()});
+setInterval(renderClock,500);
+function renderPeriods(){$("perGroup").innerHTML=PERIODS.map(p=>`<button aria-pressed="${S.period===p}" data-p="${p}">P${p}</button>`).join("")}
+$("perGroup").onclick=e=>{const b=e.target.closest("button");if(!b)return;const p=+b.dataset.p;if(p===S.period)return;
+ confirmSheet(`Byt till period ${p}?`,"Klockan pausas och nollställs för den nya perioden.",`Starta P${p}`,()=>{S.period=p;S.clock={running:false,acc:0,at:0};save();renderAll()})};
+let lock=null;async function wake(){try{if(navigator.wakeLock&&!lock){lock=await navigator.wakeLock.request("screen");lock.addEventListener("release",()=>lock=null)}}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&S.clock.running)wake()});
+
+/* ---------- event logging ---------- */
+function count(type){return S.events.filter(e=>e.type===type).length}
+function renderButtons(){
+ ["gGoal","gAtt","gDef","gNeg"].forEach(g=>$(g).innerHTML="");
+ for(const [k,d] of Object.entries(EV)){
+  const n=k==="note"?"":count(k);
+  const cls=["ev",d.cls||(d.kind==="good"?"good":d.kind==="bad"?"bad":"")].join(" ");
+  $(d.group).insertAdjacentHTML("beforeend",`<button class="${cls}" data-ev="${k}"><b>${d.label}</b><small>${d.hint}</small><span class="n">${n}</span></button>`);
+ }}
+document.querySelectorAll(".grid").forEach(g=>g.addEventListener("click",e=>{const b=e.target.closest("[data-ev]");if(b)startEvent(b.dataset.ev)}));
+
+function startEvent(type){
+ const d=EV[type];buzz();
+ if(d.pick==="none")return log({type,player:null});
+ if(d.pick==="note")return noteSheet();
+ playerSheet({title:d.title||`${d.label}: vem?`,sub:`P${S.period} · ${fmt(clockMs())}`,mvFirst:d.pick==="mv",skipLabel:d.pick==="mv"?"Okänt":"Laget / vet ej",
+  onPick:no=>{
+   if(d.assist){playerSheet({title:"Assist?",sub:`Mål av ${pname(no)}`,exclude:no,skipLabel:"Ingen assist",onPick:a=>log({type,player:no,assist:a})})}
+   else log({type,player:no})}});
+}
+function log(ev){
+ Object.assign(ev,{id:S.nextId++,period:S.period,t:clockMs(),ts:Date.now()});
+ S.events.push(ev);save();closeSheet();renderAll();
+ let msg=`${EV[ev.type].label} · ${ev.type==="note"?esc(ev.text).slice(0,30):pname(ev.player)}`;
+ if(ev.assist!=null)msg+=` (ass. #${ev.assist})`;
+ toast(msg,ev.id);
+}
+function removeEvent(id){S.events=S.events.filter(e=>e.id!==id);save();renderAll()}
+
+/* ---------- sheets ---------- */
+let onSheetClose=null;
+function openSheet(html){$("sheet").innerHTML=html;$("scrim").hidden=false}
+function closeSheet(){$("scrim").hidden=true;$("sheet").innerHTML=""}
+$("scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeSheet()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden)closeSheet()});
+
+function playerSheet({title,sub,mvFirst,exclude,skipLabel,onPick}){
+ let list=PLAYERS.filter(p=>p.no!==exclude);
+ if(mvFirst)list=[...list.filter(p=>p.mv),...list.filter(p=>!p.mv)];
+ openSheet(`<h3>${esc(title)}</h3><p class="sub">${esc(sub)}</p>
+  <div class="pgrid">${list.map(p=>`<button class="pl${mvFirst&&p.mv?" mv":""}" data-no="${p.no}"><span class="no">${p.no}</span><span class="fn">${esc(p.fn)}</span>${mvFirst&&p.mv?'<span class="tag">MÅLVAKT</span>':""}</button>`).join("")}</div>
+  <div class="sheetfoot"><button class="btn" data-skip>${esc(skipLabel)}</button><button class="btn" data-cancel>Avbryt</button></div>`);
+ $("sheet").onclick=e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.hasAttribute("data-cancel"))return closeSheet();
+  buzz();
+  if(b.hasAttribute("data-skip"))return onPick(null);
+  onPick(+b.dataset.no)};
+}
+function noteSheet(){
+ openSheet(`<h3>Anteckning</h3><p class="sub">P${S.period} · ${fmt(clockMs())}</p>
+  <input class="noteinput" id="noteText" placeholder="T.ex. bra press i början av perioden" autocomplete="off">
+  <div class="sheetfoot"><button class="btn primary" data-ok>Spara</button><button class="btn" data-cancel>Avbryt</button></div>`);
+ setTimeout(()=>$("noteText")&&$("noteText").focus(),50);
+ const ok=()=>{const t=$("noteText").value.trim();if(t)log({type:"note",player:null,text:t});else closeSheet()};
+ $("noteText").addEventListener("keydown",e=>{if(e.key==="Enter")ok()});
+ $("sheet").onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.hasAttribute("data-cancel"))closeSheet();if(b.hasAttribute("data-ok"))ok()};
+}
+function confirmSheet(title,sub,okLabel,fn,danger){
+ openSheet(`<h3>${esc(title)}</h3><p class="sub">${esc(sub)}</p><div class="sheetfoot"><button class="btn ${danger?"danger":"primary"}" data-ok>${esc(okLabel)}</button><button class="btn" data-cancel>Avbryt</button></div>`);
+ $("sheet").onclick=e=>{const b=e.target.closest("button");if(!b)return;closeSheet();if(b.hasAttribute("data-ok"))fn()};
+}
+
+/* ---------- toast ---------- */
+let toastTimer,toastId;
+function toast(msg,id){$("toastMsg").innerHTML=msg;toastId=id;$("toast").hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").hidden=true,4000)}
+$("toastUndo").onclick=()=>{if(toastId!=null)removeEvent(toastId);$("toast").hidden=true};
+
+/* ---------- rendering ---------- */
+function evRow(e){
+ const d=EV[e.type];
+ let what=`<b>${d.label}</b> `;
+ if(e.type==="note")what+=`<em>${esc(e.text)}</em>`;
+ else if(e.player!=null||d.pick!=="none")what+=`<em>${esc(pname(e.player))}${e.assist!=null?` · assist ${esc(pname(e.assist))}`:""}</em>`;
+ return `<div class="row"><span class="dot ${d.kind}"></span><span class="t">P${e.period} ${fmt(e.t)}</span><span class="what">${what}</span><button class="x" data-del="${e.id}" aria-label="Ta bort">Ta bort</button></div>`;
+}
+function renderRecent(){
+ const last=S.events.slice(-5).reverse();
+ $("recent").innerHTML=last.length?last.map(evRow).join(""):`<p class="empty">Inget registrerat än. Tryck på en knapp när något händer, välj sedan spelare.</p>`;
+}
+function renderLog(){
+ if(!S.events.length){$("logList").innerHTML=`<p class="empty">Loggen är tom.</p>`;return}
+ let html="";
+ for(const p of PERIODS){const evs=S.events.filter(e=>e.period===p).sort((a,b)=>b.t-a.t);if(!evs.length)continue;
+  html+=`<h2>Period ${p}</h2><div class="recent">${evs.map(evRow).join("")}</div>`}
+ $("logList").innerHTML=html;
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-del]");if(!b)return;const id=+b.dataset.del;
+ const ev=S.events.find(x=>x.id===id);if(!ev)return;
+ confirmSheet("Ta bort händelsen?",`${EV[ev.type].label} · ${ev.type==="note"?ev.text:pname(ev.player)} · P${ev.period} ${fmt(ev.t)}`,"Ta bort",()=>removeEvent(id),true)});
+
+function team(){
+ const c=t=>count(t);
+ const us=c("goal"),them=c("conceded"),sog=c("goal")+c("shot_on"),oppSog=c("save")+c("conceded");
+ return {us,them,sog,shots:sog+c("shot_off"),oppSog,oppShots:oppSog+c("opp_shot"),saves:c("save"),
+  svp:oppSog?Math.round(100*c("save")/oppSog):null,win:c("win"),loss:c("loss"),pass:c("pass"),chance:c("chance")};
+}
+function playerStats(){
+ return PLAYERS.map(p=>{const mine=S.events.filter(e=>e.player===p.no),n=t=>mine.filter(e=>e.type===t).length;
+  const A=S.events.filter(e=>e.assist===p.no).length,M=n("goal");
+  return {p,M,A,P:M+A,SoM:M+n("shot_on"),SU:n("shot_off"),BP:n("pass"),MC:n("chance"),BV:n("win"),BL:n("block"),HJ:n("back"),BT:n("loss"),B:n("praise"),UT:n("penalty"),R:n("save"),IM:n("conceded")}});
+}
+const COLS=[["no","#"],["nm","Namn"],["M","M"],["A","A"],["P","P"],["SoM","SoM"],["SU","SU"],["MC","MC"],["BP","BP"],["BV","BV"],["BL","BL"],["HJ","HJ"],["BT","BT"],["B","★"],["UT","2'"],["R","R"],["IM","IM"]];
+function renderPlayers(){
+ const t=team();
+ $("kpis").innerHTML=[[`${t.sog}–${t.oppSog}`,"Skott på mål"],[t.svp==null?"–":t.svp+" %","Räddningsprocent"],[`${t.win}–${t.loss}`,"Bollvinst – tapp"],[t.chance+t.pass,"Målchanser + bra pass"]]
+  .map(([v,l])=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+ let rows=playerStats();
+ const k=S.sort;
+ rows.sort((a,b)=>k==="no"?a.p.no-b.p.no:k==="nm"?a.p.fn.localeCompare(b.p.fn,"sv"):(b[k]-a[k])||(a.p.no-b.p.no));
+ $("ptable").innerHTML=`<thead><tr>${COLS.map(([k,l])=>`<th class="${k==="nm"?"nm":""}" data-sort="${k}" style="cursor:pointer">${l}${S.sort===k?" ▾":""}</th>`).join("")}</tr></thead><tbody>`+
+  rows.map(r=>`<tr><td class="num">${r.p.no}</td><td class="nm">${esc(r.p.fn)} ${esc(r.p.ln.split(" ")[0])}${r.p.mv?' <small style="color:var(--warn)">MV</small>':""}</td>`+
+   COLS.slice(2).map(([k])=>{const v=r[k];const cls=!v?"z":(k==="BT"||k==="UT"||k==="IM")?"pm-neg":(k==="M"||k==="P")?"pm-pos":"";return `<td class="${cls}">${v}</td>`}).join("")+`</tr>`).join("")+`</tbody>`;
+ $("summary").value=summaryText();
+}
+$("ptable").addEventListener("click",e=>{const th=e.target.closest("[data-sort]");if(!th)return;S.sort=th.dataset.sort;save();renderPlayers()});
+
+function summaryText(){
+ const t=team(),rs=playerStats();
+ const list=(key,label)=>{const r=rs.filter(x=>x[key]>0).sort((a,b)=>b[key]-a[key]);return r.length?`${label}: `+r.map(x=>`${x.p.fn} ${x[key]}`).join(", "):null};
+ const lines=[`Lindås Waves F14/15 – ${S.opp} ${t.us}–${t.them}`,
+  `Skott på mål: ${t.sog}–${t.oppSog}${t.svp!=null?` · Räddningsprocent ${t.svp} %`:""}`,
+  `Bollvinster ${t.win}, bolltapp ${t.loss}, bra passningar ${t.pass}, målchanser ${t.chance}`,
+  list("M","Mål"),list("A","Assist"),list("SoM","Skott på mål"),list("BV","Bollvinster"),list("BL","Blockeringar"),list("HJ","Hemjobb"),list("R","Räddningar"),list("B","Beröm")].filter(Boolean);
+ const notes=S.events.filter(e=>e.type==="note");
+ if(notes.length)lines.push("","Anteckningar:",...notes.map(n=>`P${n.period} ${fmt(n.t)} ${n.text}`));
+ return lines.join("\n");
+}
+$("copyBtn").onclick=()=>{const txt=$("summary").value;
+ const fallback=()=>{$("summary").focus();$("summary").select();toast("Markerad. Kopiera med telefonens meny.",null)};
+ try{navigator.clipboard.writeText(txt).then(()=>toast("Sammanfattningen är kopierad",null),fallback)}catch(e){fallback()}};
+
+function renderScore(){const t=team();$("sUs").textContent=t.us;$("sThem").textContent=t.them;$("oppName").textContent=S.opp}
+function renderAll(){renderScore();renderPeriods();renderClock();renderButtons();renderRecent();renderLog();renderPlayers()}
+
+/* ---------- tabs & match ---------- */
+document.querySelector(".tabs").onclick=e=>{const b=e.target.closest("[data-tab]");if(!b)return;
+ document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
+ ["reg","pl","log"].forEach(id=>$(id).hidden=id!==b.dataset.tab);window.scrollTo(0,0)};
+$("newMatch").onclick=()=>confirmSheet("Starta en ny match?","Alla händelser, ställningen och klockan raderas. Kopiera sammanfattningen först om du vill spara den.","Radera och börja om",()=>{S=fresh();save();renderAll()},true);
+$("renameOpp").onclick=()=>{
+ openSheet(`<h3>Motståndare</h3><p class="sub">Namnet syns i resultattavlan och sammanfattningen.</p><input class="noteinput" id="oppInput" value="${esc(S.opp)}" autocomplete="off"><div class="sheetfoot"><button class="btn primary" data-ok>Spara</button><button class="btn" data-cancel>Avbryt</button></div>`);
+ $("sheet").onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.hasAttribute("data-ok")){const v=$("oppInput").value.trim();if(v){S.opp=v;save()}}closeSheet();renderAll()}};
+
+renderAll();
+</script>
