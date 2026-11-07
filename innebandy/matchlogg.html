@@ -95,6 +95,45 @@ td.pm-pos{color:var(--good);font-weight:600} td.pm-neg{color:var(--bad);font-wei
 .btn.danger{color:var(--bad);border-color:var(--bad)}
 textarea{width:100%;min-height:120px;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
 
+/* Dashboard */
+.hero{display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:var(--wave);color:var(--wave-ink);margin-top:8px}
+.empty-hero{background:var(--surface);color:var(--fg);border:1px solid var(--line)}
+.hno{font-family:var(--display);font-weight:800;font-size:54px;line-height:1;min-width:1.4em;text-align:center}
+.hmid{flex:1;min-width:0}
+.heyebrow{font-size:11.5px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;opacity:.85}
+.hname{font-family:var(--display);font-weight:700;font-size:26px;line-height:1.1;text-wrap:balance}
+.hsub{font-size:13.5px;opacity:.9;margin-top:2px}
+.hval{text-align:center;display:flex;flex-direction:column;align-items:center}
+.hval b{font-family:var(--display);font-weight:800;font-size:40px;line-height:1}
+.hval span{font-size:11px;line-height:1.2;opacity:.85}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:12px}
+.cmphead{display:flex;justify-content:space-between;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.cmphead.sep{border-top:1px solid var(--line);padding-top:12px}
+.cmp{display:grid;grid-template-columns:3ch 1fr 3ch;align-items:baseline;row-gap:5px}
+.cmp .a,.cmp .b{font-family:var(--display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums}
+.cmp .b{text-align:right}
+.cmp .lab{text-align:center;font-weight:500}
+.cmp .lab small{display:block;font-size:11.5px;color:var(--muted)}
+.split{grid-column:1/-1;height:8px;border-radius:4px;background:var(--bad);overflow:hidden;opacity:.85}
+.split i{display:block;height:100%;background:var(--wave)}
+.split.none{background:var(--surface-2)} .split.none i{background:transparent}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;font-size:13px;color:var(--muted)}
+.facts b{display:block;font-family:var(--display);font-size:22px;color:var(--fg)}
+table.small{min-width:0}
+.leads{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.lead{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.lead.wide{grid-column:1/-1}
+.lead h4{margin:0 0 8px;font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:.02em}
+.lead ol{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.lead li{display:grid;grid-template-columns:22px minmax(0,7.5em) 1fr 2.5ch;align-items:center;gap:8px}
+.rk{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--surface-2);color:var(--muted)}
+.rk.r1{background:#e8b73a;color:#2a1d00}.rk.r2{background:#c3ccd3;color:#1f2a31}.rk.r3{background:#cf8f5a;color:#2a1405}
+.lname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.lbar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.lbar i{display:block;height:100%;background:var(--wave);border-radius:4px}
+.lv{font-family:var(--display);font-weight:800;font-size:18px;text-align:right;font-variant-numeric:tabular-nums}
+.lempty{margin:0;color:var(--muted);font-size:13px}
+
 /* Sheet */
 .scrim{position:fixed;inset:0;background:#0009;z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--bg);width:100%;max-width:720px;max-height:88%;overflow:auto;border-radius:18px 18px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -137,6 +176,7 @@ textarea{width:100%;min-height:120px;font:inherit;padding:10px;border-radius:10p
   <div class="wrap">
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-reg" aria-selected="true" data-tab="reg">Registrera</button>
+      <button role="tab" id="tab-dash" aria-selected="false" data-tab="dash">Översikt</button>
       <button role="tab" id="tab-pl" aria-selected="false" data-tab="pl">Spelare</button>
       <button role="tab" id="tab-log" aria-selected="false" data-tab="log">Logg</button>
     </div>
@@ -154,6 +194,17 @@ textarea{width:100%;min-height:120px;font:inherit;padding:10px;border-radius:10p
       <div class="grid" id="gNeg"></div>
       <h2>Senaste</h2>
       <div class="recent" id="recent"></div>
+    </section>
+
+    <section id="dash" hidden>
+      <div id="hero"></div>
+      <h2>Vi mot <span id="dashOpp">Dingle</span></h2>
+      <div class="panel" id="cmp"></div>
+      <h2>Per period</h2>
+      <div class="tablewrap"><table class="small" id="pertable"></table></div>
+      <h2>Topplistor i laget</h2>
+      <div class="leads" id="leads"></div>
+      <p class="legend">Positiva aktioner = mål, assist, skott på mål, målchanser, bra passningar, vunna tekningar, bollvinster, blockeringar, hemjobb, beröm och räddningar.</p>
     </section>
 
     <section id="pl" hidden>
@@ -373,12 +424,45 @@ $("copyBtn").onclick=()=>{const txt=$("summary").value;
  try{navigator.clipboard.writeText(txt).then(()=>toast("Sammanfattningen är kopierad",null),fallback)}catch(e){fallback()}};
 
 function renderScore(){const t=team();$("sUs").textContent=t.us;$("sThem").textContent=t.them;$("oppName").textContent=S.opp}
-function renderAll(){renderScore();renderPeriods();renderClock();renderButtons();renderRecent();renderLog();renderPlayers()}
+function renderAll(){renderScore();renderPeriods();renderClock();renderButtons();renderRecent();renderLog();renderPlayers();renderDash()}
+
+/* ---------- dashboard ---------- */
+function renderDash(){
+ const t=team(),rs=playerStats();
+ rs.forEach(r=>{r.AK=r.M+r.A+(r.SoM-r.M)+r.MC+r.BP+r.TV+r.BV+r.BL+r.HJ+r.B+r.R});
+ $("dashOpp").textContent=S.opp;
+ // hero: top player by positive actions
+ const top=[...rs].sort((a,b)=>b.AK-a.AK||b.P-a.P)[0];
+ if(top&&top.AK>0){
+  const best=[["M","mål"],["A","assist"],["TV","vunna tekningar"],["BV","bollvinster"],["R","räddningar"],["BL","blockeringar"],["BP","bra pass"],["SoM","skott på mål"],["HJ","hemjobb"]].filter(([k])=>top[k]>0).slice(0,4).map(([k,l])=>`${top[k]} ${l}`).join(" · ");
+  $("hero").innerHTML=`<div class="hero"><div class="hno">${top.p.no}</div><div class="hmid"><div class="heyebrow">I topp just nu</div><div class="hname">${esc(top.p.fn)} ${esc(top.p.ln)}</div><div class="hsub">${esc(best)}</div></div><div class="hval"><b>${top.AK}</b><span>positiva<br>aktioner</span></div></div>`;
+ } else $("hero").innerHTML=`<div class="hero empty-hero"><div class="hmid"><div class="heyebrow">I topp just nu</div><div class="hname">Ingen än</div><div class="hsub">Registrera händelser så visas lagets toppspelare här.</div></div></div>`;
+ // comparison bars
+ const row=(l,a,b,la,lb)=>{const s=a+b,pa=s?a/s*100:50;return `<div class="cmp"><span class="a">${a}</span><span class="lab">${l}${la?`<small>${la} – ${lb}</small>`:""}</span><span class="b">${b}</span><div class="split${s?"":" none"}"><i style="width:${pa}%"></i></div></div>`};
+ $("cmp").innerHTML=`<div class="cmphead"><span>Waves</span><span>${esc(S.opp)}</span></div>`+
+  row("Mål",t.us,t.them)+row("Skott på mål",t.sog,t.oppSog)+row("Skott totalt",t.shots,t.oppShots)+row("Tekningar",t.fw,t.fl)+
+  `<div class="cmphead sep"><span>Vårt spel</span><span></span></div>`+
+  row("Bollvinst mot tapp",t.win,t.loss,"vinst","tapp")+
+  `<div class="facts"><span><b>${t.svp==null?"–":t.svp+" %"}</b> räddningsprocent</span><span><b>${t.shots?Math.round(100*t.us/t.shots)+" %":"–"}</b> skott blir mål</span><span><b>${t.chance}</b> målchanser</span><span><b>${t.pass}</b> bra pass</span></div>`;
+ // per period
+ let ph=`<thead><tr><th class="nm">Period</th><th>Mål</th><th>Skott på mål</th><th>Tekningar</th><th>Bollvinst – tapp</th></tr></thead><tbody>`;
+ for(const p of PERIODS){const e=S.events.filter(x=>x.period===p),n=k=>e.filter(x=>x.type===k).length;
+  if(!e.length&&p>S.period)continue;
+  ph+=`<tr><td class="nm"><b>P${p}</b></td><td>${n("goal")}–${n("conceded")}</td><td>${n("goal")+n("shot_on")}–${n("save")+n("conceded")}</td><td>${n("face_win")}–${n("face_loss")}</td><td>${n("win")}–${n("loss")}</td></tr>`}
+ $("pertable").innerHTML=ph+"</tbody>";
+ // leaderboards
+ const cats=[["AK","Positiva aktioner",5],["P","Poäng (mål + assist)",3],["M","Mål",3],["A","Assist",3],["SoM","Skott på mål",3],["TV","Vunna tekningar",3],["BV","Bollvinster",3],["BL","Blockeringar",3],["MC","Målchanser",3],["BP","Bra passningar",3],["HJ","Hemjobb",3],["B","Beröm",3],["R","Räddningar",2]];
+ $("leads").innerHTML=cats.map(([k,l,n])=>{
+  const r=rs.filter(x=>x[k]>0).sort((a,b)=>b[k]-a[k]||a.p.no-b.p.no).slice(0,n),max=r.length?r[0][k]:1;
+  let rank=0,prev=null;
+  const items=r.map((x,i)=>{if(x[k]!==prev){rank=i+1;prev=x[k]}return `<li><span class="rk r${rank}">${rank}</span><span class="lname">${x.p.no} ${esc(x.p.fn)}</span><span class="lbar"><i style="width:${x[k]/max*100}%"></i></span><span class="lv">${x[k]}</span></li>`}).join("");
+  return `<div class="lead${k==="AK"?" wide":""}"><h4>${l}</h4>${items?`<ol>${items}</ol>`:`<p class="lempty">Inget registrerat än</p>`}</div>`}).join("");
+}
 
 /* ---------- tabs & match ---------- */
 document.querySelector(".tabs").onclick=e=>{const b=e.target.closest("[data-tab]");if(!b)return;
  document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
- ["reg","pl","log"].forEach(id=>$(id).hidden=id!==b.dataset.tab);window.scrollTo(0,0)};
+ ["reg","dash","pl","log"].forEach(id=>$(id).hidden=id!==b.dataset.tab);window.scrollTo(0,0)};
 $("newMatch").onclick=()=>confirmSheet("Starta en ny match?","Alla händelser, ställningen och klockan raderas. Kopiera sammanfattningen först om du vill spara den.","Radera och börja om",()=>{S=fresh();save();renderAll()},true);
 $("renameOpp").onclick=()=>{
  openSheet(`<h3>Motståndare</h3><p class="sub">Namnet syns i resultattavlan och sammanfattningen.</p><input class="noteinput" id="oppInput" value="${esc(S.opp)}" autocomplete="off"><div class="sheetfoot"><button class="btn primary" data-ok>Spara</button><button class="btn" data-cancel>Avbryt</button></div>`);
